@@ -43,6 +43,3 @@ def split_sg_output(sg_output: str):
     assert_lines(tape_cap, 7)
 
     return write_err, read_err, non_med_err, seq_access, dev_stats, vol_stats, tape_alert, tape_usage, tape_cap
-
-write_err, read_err, non_med_err, seq_access, dev_stats, vol_stats, tape_alert, tape_usage, tape_cap = split_sg_output(text)
-print("splitting text")
