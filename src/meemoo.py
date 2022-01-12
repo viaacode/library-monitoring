@@ -1,49 +1,27 @@
 import argparse
 import logging
-import os
 from datetime import datetime
 import sglogs_splitter
 from example_text import text
-import write_error
-import read_error
-import non_med_err
-import seq_access
-import dev_stats
-import vol_stats
-import tape_alert
-import tape_usage
-import tape_cap
 import threading, time
-
-    # print(write_error.text_to_write_error(write_err))
-    # print(read_error.text_to_read_error(read_err))
-    # print(non_med_err.text_to_non_med_error_count(non_med_err_str))
-    # print(seq_access.text_to_seq_access(seq_access_str))
-    # print(dev_stats.text_to_dev_stats(dev_stats_str))
-    # print(vol_stats.from_text(vol_stats_str))
-    # print(tape_alert.from_text(tape_alert_str))
-    # print(tape_usage.from_text(tape_usage_str))
-    # print(tape_cap.from_text(tape_cap_str))
-
+from log_getter import LogGetter
 
 def process(interval, devices):
     logging.info(f"Starting Meemoo monitoring with {interval} second interval, with devices: {devices}")
+    logpages_getter = LogGetter(fake=True)
 
     ticker = threading.Event()
     while not ticker.wait(interval):
-        periodicTask(devices)
+        periodicTask(devices, logpages_getter)
 
 
-
-def periodicTask(devices):
-    print("This loops on a timer every %d seconds", devices)
-    write_err, read_err, non_med_err_str, seq_access_str, dev_stats_str, vol_stats_str, tape_alert_str, tape_usage_str, tape_cap_str = get_log_classes(devices)
-
-
-def get_log_classes(devices):
+def periodicTask(devices, logpages_getter):
+    logging.info("Periodic task...")
+    logs_per_device_dict = {}
     for device in devices:
-        devicelog = 
-        return sglogs_splitter.split_sg_output(text)
+        logs_per_device_dict[device] = logpages_getter.get_logpages()
+    print(logs_per_device_dict)
+
 
 if __name__ == "__main__":
     logger = logging.getLogger()
