@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 dataclasses-json = "*"
 psycopg = "*"
+py-postgresql = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 rope = "*"
