@@ -34,7 +34,7 @@ def recreate_tables(conn):
     cur.close()
     conn.commit()
 
-
+l
 def periodicTask(devices, logpages_getter, conn):
     logging.info("Periodic task...")
     logs_per_device_dict = {}

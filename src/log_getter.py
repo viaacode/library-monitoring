@@ -7,6 +7,7 @@ import models.non_med_err as non_med_err
 import models.seq_access as seq_access
 import models.dev_stats as dev_stats
 import models.vol_stats as vol_stats
+import models.power_conditions as power_conditions
 import models.tape_alert as tape_alert
 import models.tape_usage as tape_usage
 import models.tape_cap as tape_cap
@@ -24,19 +25,20 @@ class LogGetter:
             return self.sg_output_as_dict(self.get_real_logpages(device))
 
     def get_real_logpages(self, device):
-        return os.system(f"sg_logs {device}")
+        return os.system(f"sg_logs -a {device}")
 
     def assert_nr_lines(self, thetext, linecount):
         assert thetext.count('\n')+1 == linecount
 
     def sg_output_as_dict(self, text: str):
-        write_err_str, read_err_str, non_med_err_str, seq_access_str, dev_stats_str, vol_stats_str, tape_alert_str, tape_usage_str, tape_cap_str = self.split_sg_output(text)
+        write_err_str, read_err_str, non_med_err_str, seq_access_str, dev_stats_str, vol_stats_str, power_conditions_str, tape_alert_str, tape_usage_str, tape_cap_str = self.split_sg_output(text)
         return {"write_err": write_error.text_to_write_error(write_err_str),
                 "read_err": read_error.text_to_read_error(read_err_str),
                 "non_med_err": non_med_err.text_to_non_med_error_count(non_med_err_str),
                 "seq_access": seq_access.text_to_seq_access(seq_access_str),
                 "dev_stats": dev_stats.text_to_dev_stats(dev_stats_str),
                 "vol_stats": vol_stats.from_text(vol_stats_str),
+                "power_conditions": power_conditions.from_text(power_conditions_str),
                 "tape_alert": tape_alert.from_text(tape_alert_str),
                 "tape_usage": tape_usage.from_text(tape_usage_str),
                 "tape_cap": tape_cap.from_text(tape_cap_str)}
@@ -79,7 +81,12 @@ class LogGetter:
         tape_usage = tape_usage.strip()
         self.assert_nr_lines(tape_usage, 11)
 
+        power_conditions, rest  = rest.split("Power condition transitions page  (spc-4) [0x1a]")
+        power_conditions, rest = rest.split("Data compression page  (ssc-4) [0x1b]")
+        power_conditions = power_conditions.strip()
+        self.assert_nr_lines(power_conditions, 2)
+
         tape_cap, rest = rest.split("Data compression page  (IBM specific) [0x32]")
         self.assert_nr_lines(tape_cap, 7)
 
-        return write_err, read_err, non_med_err, seq_access, dev_stats, vol_stats, tape_alert, tape_usage, tape_cap
+        return write_err, read_err, non_med_err, seq_access, dev_stats, vol_stats, power_conditions, tape_alert, tape_usage, tape_cap
