@@ -8,41 +8,54 @@ from log_getter import LogGetter
 #import postgrsql
 import psycopg2
 
-def process(interval, devices, username, password, fresh=False):
+def process(interval, devices, username, password, fresh=False, static=False):
     try:
-	    logging.info(f"Starting Meemoo monitoring with {interval} second interval, with devices: {devices}")
-	    logpages_getter = LogGetter(fake=True)
-	    host = "do-qas-dbs-md.do.viaa.be"
-	    port = 5432
-	    database = "tapemonitor"
-	    print(f'pq://{username}:{password}@{host}:{port}/{database}')
-	    #db = postgresql.open(f'pq://{username}:{password}@{host}:{port}/{database}')
-	    conn = psycopg2.connect(f'dbname={database} user={username} password={password} host={host}')
-	    #db.execute("CREATE TABLE test (emp_first_name text, emp_last_name text, emp_salary numeric)")
-	    cur = conn.cursor()
-	    if fresh:
-		cur.execute("DROP TABLE IF EXISTS test")
-		cur.execute("CREATE TABLE test (id serial PRIMARY KEY, data text, number numeric)")
-	    cur.execute(f"INSERT INTO test (data, number) VALUES (%s, %s)", ("abc'def", 100))
-	    conn.commit()
-
-	    ticker = threading.Event()
-	    while not ticker.wait(interval):
-		periodicTask(devices, logpages_getter, db)
+        logging.info(f"Starting Meemoo monitoring with {interval} second interval, with devices: {devices}. Using fake data: {static}")
+        logpages_getter = LogGetter(fake=static)
+        host = "do-qas-dbs-md.do.viaa.be"
+        port = 5432
+        database = "tapemonitor"
+        conn = psycopg2.connect(f'dbname={database} user={username} password={password} host={host}')
+        if fresh:
+            recreate_tables(conn)
+        ticker = threading.Event()
+        periodicTask(devices, logpages_getter, conn)
+        while not ticker.wait(interval):
+            periodicTask(devices, logpages_getter, conn)
     finally:
-    	print("finally")
+        conn.close()
+
+def recreate_tables(conn):
+    cur = conn.cursor()
+    cur.execute("DROP TABLE IF EXISTS drive")
+    cur.execute("DROP TABLE IF EXISTS tape")
+    cur.execute("CREATE TABLE drive (id serial PRIMARY KEY, data text, number numeric)")
+    cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, volstats JSON, tapealert JSON, tapeusage JSON, tapecap JSON, sequentialaccess JSON)")
+    cur.close()
+    conn.commit()
 
 
-def periodicTask(devices, logpages_getter, db):
+def periodicTask(devices, logpages_getter, conn):
     logging.info("Periodic task...")
     logs_per_device_dict = {}
     for device in devices:
-        logs_per_device_dict[device] = logpages_getter.get_logpages()
-    write_to_db(logs_per_device_dict, db)
+        logs_per_device_dict[device] = logpages_getter.get_logpages(device)
+    write_to_db(logs_per_device_dict, conn)
 
-def write_to_db(logs_per_device_dict, db):
-    print("writing to db ...", logs_per_device_dict)
-        
+def write_to_db(logs_per_device_dict, conn):
+    print("writing to db ...")
+    for device in logs_per_device_dict:
+        write_to_tape_db(logs_per_device_dict[device], conn)
+        # for key in logs_per_device_dict[device]:
+        #     print("key:", key, logs_per_device_dict[device][key], '\n\n')
+
+def write_to_tape_db(logs, conn):
+    cur = conn.cursor()
+    print(logs['vol_stats'].to_json())
+    cur.execute(f"INSERT INTO tape (volstats, tapealert, tapeusage, tapecap, sequentialaccess) VALUES (%s, %s, %s, %s, %s)",
+                (logs['vol_stats'].to_json(), logs['tape_alert'].to_json(),logs['tape_usage'].to_json(),logs['tape_cap'].to_json(), logs['seq_access'].to_json()))
+    cur.close()
+    conn.commit()
 
 if __name__ == "__main__":
     logger = logging.getLogger()
@@ -83,6 +96,14 @@ if __name__ == "__main__":
 	action="store_true"
     )
     parser.add_argument(
+        "-s",
+        "--static",
+        help="Use static data instead of real SCSI results",
+	default=False,
+	action="store_true"
+    )
+
+    parser.add_argument(
         "-x", "--verbose", help="Set logging to debug mode", action="store_true"
     )
     args = parser.parse_args()
@@ -100,4 +121,4 @@ if __name__ == "__main__":
     # assert os.path.exists(args.datadir), "datadir does not exist"
     # assert os.path.exists(args.resultdir), "resultdir does not exist"
     # assert os.path.exists(args.fitsdir), "fitsdir does not exist"
-    process(int(args.interval), args.devices, args.username, args.password, args.fresh)
+    process(int(args.interval), args.devices, args.username, args.password, args.fresh, args.static)

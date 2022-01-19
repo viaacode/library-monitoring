@@ -65,7 +65,7 @@ class TapeAlert:
     automation_interface_failure: int = 0
     firmware_failure: int = 0
     worm_medium_integrity_check_failed: int = 0
-    worormm_medium_overwrite_attempted: int = 0
+    worm_medium_overwrite_attempted: int = 0
     reserved_parameter_code_0x3d_flag: int = 0
     reserved_parameter_code_0x3e_flag: int = 0
     reserved_parameter_code_0x3f_flag: int = 0

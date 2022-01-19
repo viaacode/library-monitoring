@@ -1,3 +1,4 @@
+import os
 from example_text import text
 import sglogs_splitter
 import models.write_error as write_error
@@ -15,15 +16,15 @@ class LogGetter:
     def __init__(self, fake=False):
         self.fake = fake
 
-    def get_logpages(self):
+    def get_logpages(self, device):
         if self.fake:
             return self.sg_output_as_dict(text)
         else:
             # TODO perform a real sg_logs call
-            return self.sg_output_as_dict(self.get_real_logpages())
+            return self.sg_output_as_dict(self.get_real_logpages(device))
 
-    def get_real_logpages(self):
-        return text
+    def get_real_logpages(self, device):
+        return os.system(f"sg_logs {device}")
 
     def assert_nr_lines(self, thetext, linecount):
         assert thetext.count('\n')+1 == linecount
