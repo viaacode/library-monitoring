@@ -23,7 +23,6 @@ class SequentialAccess:
 
 def from_arr(textarr):
     re = SequentialAccess()
-    re.non_medium_error_count = utils.extract_size(textarr[0])
     re.data_bytes_received_with_WRITE_commands = utils.extract_size(textarr[0])
     re.data_bytes_written_to_media_by_WRITE_commands = utils.extract_size(textarr[1])
     re.data_bytes_read_from_media_by_READ_commands = utils.extract_size(textarr[2])
