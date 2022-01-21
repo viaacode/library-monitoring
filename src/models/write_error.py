@@ -21,9 +21,8 @@ class WriteError:
 def extract_int(thetext):
     return int(thetext.split('=')[1].strip())
 
-def text_to_write_error(text):
+def from_arr(textarr):
     we = WriteError()
-    textarr = text.split('\n')
     we.errors_corrected_without_substantial_delay = extract_int(textarr[0])
     we.errors_corrected_with_possible_delays = extract_int(textarr[1])
     we.total_rewrites_or_rereads = extract_int(textarr[2])

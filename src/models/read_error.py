@@ -20,9 +20,8 @@ class ReadError:
 def extract_int(thetext):
     return int(thetext.split('=')[1].strip())
 
-def text_to_read_error(text):
+def from_arr(textarr):
     re = ReadError()
-    textarr = text.split('\n')
     re.errors_corrected_without_substantial_delay = extract_int(textarr[0])
     re.errors_corrected_with_possible_delays = extract_int(textarr[1])
     re.total_rewrites_or_rereads = extract_int(textarr[2])

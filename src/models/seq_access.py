@@ -21,9 +21,8 @@ class SequentialAccess:
     vendor_specific_parameter_0x8002_value: int = 0
     vendor_specific_parameter_0x8003_value: int = 0
 
-def text_to_seq_access(text):
+def from_arr(textarr):
     re = SequentialAccess()
-    textarr = text.split('\n')
     re.non_medium_error_count = utils.extract_size(textarr[0])
     re.data_bytes_received_with_WRITE_commands = utils.extract_size(textarr[0])
     re.data_bytes_written_to_media_by_WRITE_commands = utils.extract_size(textarr[1])

@@ -18,9 +18,8 @@ class TapeUsage:
     total_suspended_reads: int = 0
     total_fatal_suspended_reads: int = 0
 
-def from_text(text):
+def from_arr(textarr):
     re = TapeUsage()
-    textarr = text.split('\n')
     # re.read_warning = utils.extract_int(textarr[0], sep=':')
     re.thread_count = utils.extract_int(textarr[0], sep=':')
     re.total_data_sets_written = utils.extract_int(textarr[1], sep=':')

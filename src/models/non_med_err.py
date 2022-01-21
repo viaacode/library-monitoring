@@ -12,8 +12,7 @@ class NonMedErrorCount:
 def extract_int(thetext):
     return int(thetext.split('=')[1].strip())
 
-def text_to_non_med_error_count(text):
+def from_arr(textarr):
     re = NonMedErrorCount()
-    textarr = text.split('\n')
     re.non_medium_error_count = extract_int(textarr[0])
     return re

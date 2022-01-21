@@ -34,9 +34,8 @@ class DevStats:
     reserved_parameter_0x81_value: int = 0
 
 
-def text_to_dev_stats(text):
+def from_arr(textarr):
     re = DevStats()
-    textarr = text.split('\n')
     re.lifetime_media_loads = utils.extract_int(textarr[0], sep=':')
     re.lifetime_cleaning_operations = utils.extract_int(textarr[1], sep=':')
     re.lifetime_power_on_hours = utils.extract_int(textarr[2], sep=':')

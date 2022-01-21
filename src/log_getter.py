@@ -12,6 +12,7 @@ import models.power_conditions as power_conditions
 import models.tape_alert as tape_alert
 import models.tape_usage as tape_usage
 import models.tape_cap as tape_cap
+import re
 
 class LogGetter:
     """ Class for getting the logs """
@@ -28,76 +29,82 @@ class LogGetter:
     def get_real_logpages(self, device):
         return os.system(f"sg_logs -a {device}")
 
-    def assert_nr_lines(self, thetext, linecount):
-        counted_lines = thetext.count('\n')+1
-        assert counted_lines == linecount, f"Linecount should be {linecount} but is {counted_lines} for text {thetext}"
+    def assert_nr_lines(self, textarr, linecount):
+        counted_lines = len(textarr)
+        assert counted_lines == linecount, f"Linecount should be {linecount} but is {counted_lines} for text {textarr}"
 
     def sg_output_as_dict(self, text: str):
-        write_err_str, read_err_str, non_med_err_str, seq_access_str, dev_stats_str, vol_stats_str, power_conditions_str, tape_alert_str, tape_usage_str, tape_cap_str = self.split_sg_output(text)
-        return {"write_err": write_error.text_to_write_error(write_err_str),
-                "read_err": read_error.text_to_read_error(read_err_str),
-                "non_med_err": non_med_err.text_to_non_med_error_count(non_med_err_str),
-                "seq_access": seq_access.text_to_seq_access(seq_access_str),
-                "dev_stats": dev_stats.text_to_dev_stats(dev_stats_str),
-                "vol_stats": vol_stats.from_text(vol_stats_str),
-                "power_conditions": power_conditions.from_text(power_conditions_str),
-                "tape_alert": tape_alert.from_text(tape_alert_str),
-                "tape_usage": tape_usage.from_text(tape_usage_str),
-                "tape_cap": tape_cap.from_text(tape_cap_str)}
+        write_err_arr, read_err_arr, non_med_err_arr, seq_access_arr, dev_stats_arr, vol_stats_arr, power_conditions_arr, tape_alert_arr, tape_usage_arr, tape_cap_arr = self.split_sg_output(text)
+        return {"write_err": write_error.from_arr(write_err_arr),
+                "read_err": read_error.from_arr(read_err_arr),
+                "non_med_err": non_med_err.from_arr(non_med_err_arr),
+                "seq_access": seq_access.from_arr(seq_access_arr),
+                "dev_stats": dev_stats.from_arr(dev_stats_arr),
+                "vol_stats": vol_stats.from_arr(vol_stats_arr),
+                "power_conditions": power_conditions.from_arr(power_conditions_arr),
+                "tape_alert": tape_alert.from_arr(tape_alert_arr),
+                "tape_usage": tape_usage.from_arr(tape_usage_arr),
+                "tape_cap": tape_cap.from_arr(tape_cap_arr)}
 
     def split_sg_output(self, sg_output: str, debug=False):
-        _, rest = sg_output.split("Write error counter page  (spc-3) [0x2]")
-        write_err, rest = rest.split("Read error counter page  (spc-3) [0x3]")
-        write_err = write_err.strip()
+        lines = [x.strip() for x in sg_output.split('\n') if x is not None and x.strip() != '']
+
+        write_err = self.get_lines_between_ids('\[0x2\]', '\[0x3\]', lines)
         self.assert_nr_lines(write_err, 9)
         logging.debug(f"write_err: {write_err}")
 
-        read_err, rest = rest.split("Non-medium error page  (spc-2) [0x6]")
-        read_err = read_err.strip()
+        read_err  = self.get_lines_between_ids('\[0x3\]', '\[0x6\]', lines)
         self.assert_nr_lines(read_err, 8)
         logging.debug(f"read_err: {read_err}")
 
-        non_med_err, rest = rest.split("Sequential access device page (ssc-3)")
-        non_med_err = non_med_err.strip()
+        non_med_err  = self.get_lines_between_ids('\[0x6\]', 'Sequential access device page', lines)
         self.assert_nr_lines(non_med_err, 1)
         logging.debug(f"non med err: {non_med_err}")
 
-        seq_access, rest = rest.split("DT device status page (ssc-3, adc-3) [0x11]")
-        seq_access = seq_access.strip()
+        seq_access  = self.get_lines_between_ids('Sequential access device page', '\[0x11\]', lines)
         self.assert_nr_lines(seq_access, 14)
         logging.debug(f"seq access: {seq_access}")
 
-        _, rest = rest.split("Device statistics page (ssc-3 and adc)")
-        dev_stats, rest = rest.split("Tape diagnostics data page (ssc-3) [0x16]")
-        dev_stats = dev_stats.strip()
+        dev_stats = self.get_lines_between_ids('Device statistics page', '\[0x16\]', lines)
         self.assert_nr_lines(dev_stats, 32)
         logging.debug(f"dev stats: {dev_stats}")
 
-        _, rest = rest.split("Volume statistics page (ssc-4) but subpage=0, abnormal: treat like subpage=1")
-        vol_stats, rest = rest.split("Power condition transitions page  (spc-4) [0x1a]")
-        vol_stats = vol_stats.strip()
+        vol_stats = self.get_lines_between_ids('Volume statistics page', '\[0x1a\]', lines)
         self.assert_nr_lines(vol_stats, 49)
         logging.debug(f"vol_stats: {vol_stats}")
 
-        power_conditions, rest  = rest.split("Data compression page  (ssc-4) [0x1b]")
-        power_conditions = power_conditions.strip()
+        power_conditions = self.get_lines_between_ids('\[0x1a\]', '\[0x1b\]', lines)
         self.assert_nr_lines(power_conditions, 2)
         logging.debug(f"power_conditions: {power_conditions}")
 
-        tape_cap, rest = rest.split("Tape alert page (ssc-3) [0x2e]")
-        tape_cap = tape_cap.strip()
-        self.assert_nr_lines(tape_cap, 11)
-        logging.debug(f"tape_cap: {tape_cap}")
-
-        tape_alert, rest = rest.split("Tape usage page  (IBM specific) [0x30]")
-        tape_alert = tape_alert.strip()
+        tape_alert = self.get_lines_between_ids('\[0x2e\]', '\[0x30\]', lines)
         self.assert_nr_lines(tape_alert, 64)
         logging.debug(f"tape_alert: {tape_alert}")
 
-
-        tape_usage, rest  = rest.split("Tape capacity page  (IBM specific) [0x31]")
-        tape_usage = tape_usage.strip()
+        tape_usage = self.get_lines_between_ids('\[0x30\]', '\[0x31\]', lines)
         self.assert_nr_lines(tape_usage, 11)
         logging.debug(f"tape_usage: {tape_usage}")
 
+        tape_cap = self.get_lines_between_ids('\[0x31\]', '\[0x32\]', lines)
+        self.assert_nr_lines(tape_cap, 4)
+        logging.debug(f"tape_cap: {tape_cap}")
+
         return write_err, read_err, non_med_err, seq_access, dev_stats, vol_stats, power_conditions, tape_alert, tape_usage, tape_cap
+
+    def get_lines_between_ids(self, start_id, end_id, lines):
+        start = self.find_line_with_id(lines, start_id)
+        end = self.find_line_with_id(lines, end_id)
+        logging.debug(f"start is {start}, end is {end}, len lines is {len(lines)}")
+        return lines[start+1:end]
+
+
+    def find_line_with_id(self, lines, regex_part: str):
+        p = re.compile(f'.*{regex_part}.*')
+        for idx, line in enumerate(lines):
+            match = p.match(line)
+            if match:
+                logging.debug(f"Have a match with {regex_part}: {match} at idx {idx}")
+                return idx
+        return None
+
+

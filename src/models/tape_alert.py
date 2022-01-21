@@ -72,9 +72,8 @@ class TapeAlert:
     reserved_parameter_code_0x40_flag: int = 0
 
 
-def from_text(text):
+def from_arr(textarr):
     re = TapeAlert()
-    textarr = text.split('\n')
     re.read_warning = utils.extract_int(textarr[0], sep=':')
     re.write_warning = utils.extract_int(textarr[1], sep=':')
     re.hard_error = utils.extract_int(textarr[2], sep=':')

@@ -40,9 +40,8 @@ class VolStats:
     beginning_of_medium_passes: int = 0
     middle_of_medium_passes: int = 0
 
-def from_text(text):
+def from_arr(textarr):
     re = VolStats()
-    textarr = text.split('\n')
     re.page_valid = utils.extract_int(textarr[0], sep=':')
     re.thread_count = utils.extract_int(textarr[1], sep=':')
     re.total_data_sets_written = utils.extract_int(textarr[2], sep=':')

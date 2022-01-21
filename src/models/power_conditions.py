@@ -10,9 +10,8 @@ class PowerConditions:
 def extract_int(thetext):
     return int(thetext.split('=')[1].strip())
 
-def from_text(text):
+def from_arr(textarr):
     re = PowerConditions()
-    textarr = text.split('\n')
     re.accumulated_transations_to_idla_a = extract_int(textarr[0])
     re.reserved_0x4 = extract_int(textarr[1])
     return re
