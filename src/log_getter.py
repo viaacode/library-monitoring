@@ -12,7 +12,7 @@ import models.power_conditions as power_conditions
 import models.tape_alert as tape_alert
 import models.tape_usage as tape_usage
 import models.tape_cap as tape_cap
-import re
+import utils
 
 class LogGetter:
     """ Class for getting the logs """
@@ -92,19 +92,10 @@ class LogGetter:
         return write_err, read_err, non_med_err, seq_access, dev_stats, vol_stats, power_conditions, tape_alert, tape_usage, tape_cap
 
     def get_lines_between_ids(self, start_id, end_id, lines):
-        start = self.find_line_with_id(lines, start_id)
-        end = self.find_line_with_id(lines, end_id)
+        start = utils.get_sglogs_value_of(lines, start_id)
+        end = utils.get_sglogs_value_of(lines, end_id)
         logging.debug(f"start is {start}, end is {end}, len lines is {len(lines)}")
         return lines[start+1:end]
 
-
-    def find_line_with_id(self, lines, regex_part: str):
-        p = re.compile(f'.*{regex_part}.*')
-        for idx, line in enumerate(lines):
-            match = p.match(line)
-            if match:
-                logging.debug(f"Have a match with {regex_part}: {match} at idx {idx}")
-                return idx
-        return None
 
 

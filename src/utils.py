@@ -1,4 +1,5 @@
 import logging
+import re
 
 def extract_int(thetext, sep='='):
     logging.debug("extract int"+ thetext)
@@ -19,3 +20,12 @@ def extract_size(thetext):
     else:
         result = int(content[:-2])
     return result
+
+def get_sglogs_value_of(lines, tosearch):
+    p = re.compile(f'.*{tosearch}.*')
+    for idx, line in enumerate(lines):
+        match = p.match(line)
+        if match:
+            logging.debug(f"Match with {tosearch}: {match} at idx {idx}")
+            return idx
+    return None
