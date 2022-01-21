@@ -10,7 +10,7 @@ class PowerConditions:
 def extract_int(thetext):
     return int(thetext.split('=')[1].strip())
 
-def text_to_non_med_error_count(text):
+def from_text(text):
     re = PowerConditions()
     textarr = text.split('\n')
     re.accumulated_transations_to_idla_a = extract_int(textarr[0])

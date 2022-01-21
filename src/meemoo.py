@@ -30,11 +30,12 @@ def recreate_tables(conn):
     cur.execute("DROP TABLE IF EXISTS drive")
     cur.execute("DROP TABLE IF EXISTS tape")
     cur.execute("CREATE TABLE drive (id serial PRIMARY KEY, data text, number numeric)")
-    cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, volstats JSON, tapealert JSON, tapeusage JSON, tapecap JSON, sequentialaccess JSON)")
+    cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,   \
+                volume_serial_number TEXT,  tape_lot_identifier TEXT, volume_barcode TEXT, volume_manufacturer TEXT, volume_license_code TEXT, volume_personality TEXT, page_valid INTEGER, thread_count INTEGER, \
+                volstats JSON, tapealert JSON, tapeusage JSON, tapecap JSON, sequentialaccess JSON)")
     cur.close()
     conn.commit()
 
-l
 def periodicTask(devices, logpages_getter, conn):
     logging.info("Periodic task...")
     logs_per_device_dict = {}
@@ -51,9 +52,12 @@ def write_to_db(logs_per_device_dict, conn):
 
 def write_to_tape_db(logs, conn):
     cur = conn.cursor()
+    volStats = logs['vol_stats']
     print(logs['vol_stats'].to_json())
-    cur.execute(f"INSERT INTO tape (volstats, tapealert, tapeusage, tapecap, sequentialaccess) VALUES (%s, %s, %s, %s, %s)",
-                (logs['vol_stats'].to_json(), logs['tape_alert'].to_json(),logs['tape_usage'].to_json(),logs['tape_cap'].to_json(), logs['seq_access'].to_json()))
+    cur.execute(f"INSERT INTO tape (volume_serial_number, tape_lot_identifier, volume_barcode, volume_manufacturer, volume_license_code, \
+                volume_personality, page_valid, thread_count, volstats, tapealert, \
+                tapeusage, tapecap, sequentialaccess) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (volStats.volume_serial_number, volStats.tape_lot_identifier, volStats.volume_barcode, volStats.volume_manufacturer, volStats.volume_license_code, volStats.volume_personality, volStats.page_valid, volStats.thread_count, logs['vol_stats'].to_json(), logs['tape_alert'].to_json(),logs['tape_usage'].to_json(),logs['tape_cap'].to_json(), logs['seq_access'].to_json()))
     cur.close()
     conn.commit()
 

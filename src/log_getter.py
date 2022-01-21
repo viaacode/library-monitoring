@@ -28,7 +28,8 @@ class LogGetter:
         return os.system(f"sg_logs -a {device}")
 
     def assert_nr_lines(self, thetext, linecount):
-        assert thetext.count('\n')+1 == linecount
+        counted_lines = thetext.count('\n')+1
+        assert counted_lines == linecount, f"Linecount should be {linecount} but is {counted_lines} for text {thetext}"
 
     def sg_output_as_dict(self, text: str):
         write_err_str, read_err_str, non_med_err_str, seq_access_str, dev_stats_str, vol_stats_str, power_conditions_str, tape_alert_str, tape_usage_str, tape_cap_str = self.split_sg_output(text)
@@ -71,7 +72,14 @@ class LogGetter:
         vol_stats = vol_stats.strip()
         self.assert_nr_lines(vol_stats, 49)
 
-        _, rest = rest.split("Tape alert page (ssc-3) [0x2e]")
+        power_conditions, rest  = rest.split("Data compression page  (ssc-4) [0x1b]")
+        power_conditions = power_conditions.strip()
+        self.assert_nr_lines(power_conditions, 2)
+
+        tape_cap, rest = rest.split("Tape alert page (ssc-3) [0x2e]")
+        tape_cap = tape_cap.strip()
+        self.assert_nr_lines(tape_cap, 11)
+
         tape_alert, rest = rest.split("Tape usage page  (IBM specific) [0x30]")
         tape_alert = tape_alert.strip()
         self.assert_nr_lines(tape_alert, 64)
@@ -81,12 +89,5 @@ class LogGetter:
         tape_usage = tape_usage.strip()
         self.assert_nr_lines(tape_usage, 11)
 
-        power_conditions, rest  = rest.split("Power condition transitions page  (spc-4) [0x1a]")
-        power_conditions, rest = rest.split("Data compression page  (ssc-4) [0x1b]")
-        power_conditions = power_conditions.strip()
-        self.assert_nr_lines(power_conditions, 2)
-
-        tape_cap, rest = rest.split("Data compression page  (IBM specific) [0x32]")
-        self.assert_nr_lines(tape_cap, 7)
 
         return write_err, read_err, non_med_err, seq_access, dev_stats, vol_stats, power_conditions, tape_alert, tape_usage, tape_cap
