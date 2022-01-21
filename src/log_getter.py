@@ -13,6 +13,7 @@ import models.tape_alert as tape_alert
 import models.tape_usage as tape_usage
 import models.tape_cap as tape_cap
 import utils
+import subprocess
 
 class LogGetter:
     """ Class for getting the logs """
@@ -27,7 +28,12 @@ class LogGetter:
             return self.sg_output_as_dict(self.get_real_logpages(device))
 
     def get_real_logpages(self, device):
-        return os.system(f"sg_logs -a {device}")
+        output  = None
+        try:
+             output = subprocess.run(['sg_logs', '-a', device], check=True, capture_output=True, text=True).stdout
+        except subprocess.CalledProcessError as err:
+             logging.error(f"An error occurred calling sg_logs: {err}")
+        return output
 
     def assert_nr_lines(self, textarr, linecount):
         counted_lines = len(textarr)
