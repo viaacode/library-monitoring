@@ -1,4 +1,5 @@
 import os
+import logging
 from example_text import text
 import sglogs_splitter
 import models.write_error as write_error
@@ -44,50 +45,59 @@ class LogGetter:
                 "tape_usage": tape_usage.from_text(tape_usage_str),
                 "tape_cap": tape_cap.from_text(tape_cap_str)}
 
-    def split_sg_output(self, sg_output: str):
+    def split_sg_output(self, sg_output: str, debug=False):
         _, rest = sg_output.split("Write error counter page  (spc-3) [0x2]")
         write_err, rest = rest.split("Read error counter page  (spc-3) [0x3]")
         write_err = write_err.strip()
         self.assert_nr_lines(write_err, 9)
+        logging.debug(f"write_err: {write_err}")
 
         read_err, rest = rest.split("Non-medium error page  (spc-2) [0x6]")
         read_err = read_err.strip()
         self.assert_nr_lines(read_err, 8)
+        logging.debug(f"read_err: {read_err}")
 
         non_med_err, rest = rest.split("Sequential access device page (ssc-3)")
         non_med_err = non_med_err.strip()
         self.assert_nr_lines(non_med_err, 1)
+        logging.debug(f"non med err: {non_med_err}")
 
         seq_access, rest = rest.split("DT device status page (ssc-3, adc-3) [0x11]")
         seq_access = seq_access.strip()
         self.assert_nr_lines(seq_access, 14)
+        logging.debug(f"seq access: {seq_access}")
 
         _, rest = rest.split("Device statistics page (ssc-3 and adc)")
         dev_stats, rest = rest.split("Tape diagnostics data page (ssc-3) [0x16]")
         dev_stats = dev_stats.strip()
         self.assert_nr_lines(dev_stats, 32)
+        logging.debug(f"dev stats: {dev_stats}")
 
         _, rest = rest.split("Volume statistics page (ssc-4) but subpage=0, abnormal: treat like subpage=1")
         vol_stats, rest = rest.split("Power condition transitions page  (spc-4) [0x1a]")
         vol_stats = vol_stats.strip()
         self.assert_nr_lines(vol_stats, 49)
+        logging.debug(f"vol_stats: {vol_stats}")
 
         power_conditions, rest  = rest.split("Data compression page  (ssc-4) [0x1b]")
         power_conditions = power_conditions.strip()
         self.assert_nr_lines(power_conditions, 2)
+        logging.debug(f"power_conditions: {power_conditions}")
 
         tape_cap, rest = rest.split("Tape alert page (ssc-3) [0x2e]")
         tape_cap = tape_cap.strip()
         self.assert_nr_lines(tape_cap, 11)
+        logging.debug(f"tape_cap: {tape_cap}")
 
         tape_alert, rest = rest.split("Tape usage page  (IBM specific) [0x30]")
         tape_alert = tape_alert.strip()
         self.assert_nr_lines(tape_alert, 64)
+        logging.debug(f"tape_alert: {tape_alert}")
 
 
         tape_usage, rest  = rest.split("Tape capacity page  (IBM specific) [0x31]")
         tape_usage = tape_usage.strip()
         self.assert_nr_lines(tape_usage, 11)
-
+        logging.debug(f"tape_usage: {tape_usage}")
 
         return write_err, read_err, non_med_err, seq_access, dev_stats, vol_stats, power_conditions, tape_alert, tape_usage, tape_cap

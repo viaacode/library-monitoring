@@ -8,6 +8,7 @@ dataclasses-json = "*"
 psycopg = "*"
 py-postgresql = "*"
 psycopg2-binary = "*"
+dataclasses = "*"
 
 [dev-packages]
 rope = "*"

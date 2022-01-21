@@ -8,10 +8,11 @@ from log_getter import LogGetter
 #import postgrsql
 import psycopg2
 
-def process(interval, devices, username, password, fresh=False, static=False):
+def process(interval, devices, username, password, fresh=False, static_logs=False):
     try:
-        logging.info(f"Starting Meemoo monitoring with {interval} second interval, with devices: {devices}. Using fake data: {static}")
-        logpages_getter = LogGetter(fake=static)
+        outputtext = f'Starting Meemoo monitoring with {interval} second interval, with devices: {devices}. Using fake data: {static_logs}'
+        logging.debug(outputtext)
+        logpages_getter = LogGetter(fake=static_logs)
         host = "do-qas-dbs-md.do.viaa.be"
         port = 5432
         database = "tapemonitor"
