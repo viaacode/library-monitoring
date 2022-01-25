@@ -8,6 +8,9 @@ from log_getter import LogGetter
 #import postgrsql
 import psycopg2
 
+from src.models.dev_stats import DevStats
+from src.models.power_conditions import PowerConditions
+
 def process(interval, devices, username, password, fresh=False, static_logs=False):
     try:
         outputtext = f'Starting Meemoo monitoring with {interval} second interval, with devices: {devices}. Using fake data: {static_logs}'
@@ -30,7 +33,13 @@ def recreate_tables(conn):
     cur = conn.cursor()
     cur.execute("DROP TABLE IF EXISTS drive")
     cur.execute("DROP TABLE IF EXISTS tape")
-    cur.execute("CREATE TABLE drive (id serial PRIMARY KEY, data text, number numeric)")
+    cur.execute("CREATE TABLE drive (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,   \
+            lifetime_media_loads INTEGER, lifetime_cleaning_operations INTEGER, lifetime_power_on_hours INTEGER, lifetime_media_motion_head_hours INTEGER, \
+            lifetime_metres_of_tape_processed INTEGER, lifetime_media_motion_head_hours_when_incompatible_media_last_loaded INTEGER, \
+            lifetime_power_on_hours_when_last_temperature_condition_occurred INTEGER, lifetime_power_on_hours_when_last_power_consumption_condition_occurred INTEGER, \
+            media_motion_head_hours_since_last_successful_cleaning_operation INTEGER, media_motion_head_hours_since_2nd_to_last_successful_cleaning INTEGER, \
+            media_motion_head_hours_since_3rd_to_last_successful_cleaning INTEGER, lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred INTEGER, \
+            accumulated_transitions_to_idle_a INTEGER, dev_stats JSON")
     cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,   \
                 volume_serial_number TEXT,  tape_lot_identifier TEXT, volume_barcode TEXT, volume_manufacturer TEXT, volume_license_code TEXT, volume_personality TEXT, page_valid INTEGER, thread_count INTEGER, \
                 volstats JSON, tapealert JSON, tapeusage JSON, tapecap JSON, sequentialaccess JSON)")
@@ -54,13 +63,34 @@ def write_to_db(logs_per_device_dict, conn):
 def write_to_tape_db(logs, conn):
     cur = conn.cursor()
     volStats = logs['vol_stats']
-    print(logs['vol_stats'].to_json())
+    logging.info(f"Vol_stats: {logs['vol_stats'].to_json()}")
     cur.execute(f"INSERT INTO tape (volume_serial_number, tape_lot_identifier, volume_barcode, volume_manufacturer, volume_license_code, \
                 volume_personality, page_valid, thread_count, volstats, tapealert, \
                 tapeusage, tapecap, sequentialaccess) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (volStats.volume_serial_number, volStats.tape_lot_identifier, volStats.volume_barcode, volStats.volume_manufacturer, volStats.volume_license_code, volStats.volume_personality, volStats.page_valid, volStats.thread_count, logs['vol_stats'].to_json(), logs['tape_alert'].to_json(),logs['tape_usage'].to_json(),logs['tape_cap'].to_json(), logs['seq_access'].to_json()))
     cur.close()
     conn.commit()
+
+def write_to_device_db(logs, conn):
+    cur = conn.cursor()
+    devStats: DevStats = logs['power_conditions']
+    powerConditions: PowerConditions = logs['dev_stats']
+    logging.info(f"Dev_stats: {logs['dev_stats'].to_json()}")
+    cur.execute(f"INSERT INTO device (lifetime_media_loads, lifetime_cleaning_operations, lifetime_power_on_hours, lifetime_media_motion_head_hours, \
+            lifetime_metres_of_tape_processed, lifetime_media_motion_head_hours_when_incompatible_media_last_loaded, \
+            lifetime_power_on_hours_when_last_temperature_condition_occurred, lifetime_power_on_hours_when_last_power_consumption_condition_occurred, \
+            media_motion_head_hours_since_last_successful_cleaning_operation, media_motion_head_hours_since_2nd_to_last_successful_cleaning, \
+            media_motion_head_hours_since_3rd_to_last_successful_cleaning, lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred, \
+            accumulated_transitions_to_idle_a, dev_stats) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (devStats.lifetime_media_loads, devStats.lifetime_cleaning_operations, devStats.lifetime_power_on_hours, devStats.lifetime_media_motion_head_hours,
+             devStats.lifetime_metres_of_tape_processed, devStats.lifetime_media_motion_head_hours_when_incompatible_media_last_loaded,
+             devStats.lifetime_power_on_hours_when_last_temperature_condition_occurred, devStats.lifetime_power_on_hours_when_last_power_consumption_condition_occurred,
+             devStats.media_motion_head_hours_since_last_successful_cleaning_operation, devStats.media_motion_head_hours_since_2nd_to_last_successful_cleaning,
+             devStats.media_motion_head_hours_since_3rd_to_last_successful_cleaning, devStats.lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred,
+             powerConditions.accumulated_transitions_to_idle_a, devStats))
+    cur.close()
+    conn.commit()
+
 
 if __name__ == "__main__":
     logger = logging.getLogger()
