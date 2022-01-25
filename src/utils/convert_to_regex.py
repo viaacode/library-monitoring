@@ -1,18 +1,44 @@
 
-text = """Data bytes received with WRITE commands: 0 GB
-    Data bytes written to media by WRITE commands: 0 GB
-    Data bytes read from media by READ commands: 0 GB
-    Data bytes transferred by READ commands: 0 GB
-    Native capacity from BOP to EOD: 4294967295 MB
-    Native capacity from BOP to EW of current partition: 4294967295 MB
-    Minimum native capacity from EW to EOP of current partition: 4294967295 MB
-    Native capacity from BOP to current position: 4294967295 MB
-    Maximum native capacity in device object buffer: 679 MB
-    Cleaning action not required (or completed)
-    Vendor specific parameter [0x8000] value: 31099778
-    Vendor specific parameter [0x8001] value: 419
-    Vendor specific parameter [0x8002] value: 0
-    Vendor specific parameter [0x8003] value: 247318918
+text = """ Lifetime media loads: 420
+  Lifetime cleaning operations: 0
+  Lifetime power on hours: 70459
+  Lifetime media motion (head) hours: 123
+  Lifetime metres of tape processed: 1878268
+  Lifetime media motion (head) hours when incompatible media last loaded: 112
+  Lifetime power on hours when last temperature condition occurred: 0
+  Lifetime power on hours when last power consumption condition occurred: 0
+  Media motion (head) hours since last successful cleaning operation: 123
+  Media motion (head) hours since 2nd to last successful cleaning: 123
+  Media motion (head) hours since 3rd to last successful cleaning: 123
+  Lifetime power on hours when last operator initiated forced reset
+    and/or emergency eject occurred: 0
+  Lifetime power cycles: 44
+  Volume loads since last parameter reset: 289
+  Hard write errors: 0
+  Hard read errors: 0
+  Duty cycle sample time (ms): 11515778172
+  Read duty cycle: 0
+  Write duty cycle: 0
+  Activity duty cycle: 0
+  Volume not present duty cycle: 65
+  Ready duty cycle: 23
+  Drive manufacturer's serial number: 0
+  Drive serial number: 0
+  Medium removal prevented: 0
+  Maximum recommended mechanism temperature exceeded: 0
+  Media motion (head) hours for each medium type:
+    Density code: 0x46, Medium type: 0x48
+      Medium motion hours: 0
+    Density code: 0x46, Medium type: 0x4c
+      Medium motion hours: 0
+    Density code: 0x58, Medium type: 0x58
+      Medium motion hours: 28
+    Density code: 0x58, Medium type: 0x5c
+      Medium motion hours: 0
+    Density code: 0x5a, Medium type: 0x68
+      Medium motion hours: 96
+    Density code: 0x5a, Medium type: 0x6c
+      Medium motion hours: 0
 """
 def convert_to_var(input):
     return input.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('[', '').replace(']', '')

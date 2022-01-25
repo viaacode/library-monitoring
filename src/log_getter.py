@@ -53,7 +53,7 @@ class LogGetter:
                 "tape_cap": tape_cap.from_arr(tape_cap_arr)}
 
     def split_sg_output(self, sg_output: str, debug=False):
-        lines = [x.strip() for x in sg_output.split('\n') if x is not None and x.strip() != '']
+        lines = [x.strip() for x in sg_output.strip().split('\n') if x is not None and x.strip() != '']
 
         write_err = self.get_lines_between_ids('\[0x2\]', '\[0x3\]', lines)
         self.assert_nr_lines(write_err, 9)

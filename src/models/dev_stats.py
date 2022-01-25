@@ -5,7 +5,6 @@ import utils
 @dataclass
 @dataclass_json
 class DevStats:
-    """Class for keeping track of an item in inventory."""
     lifetime_media_loads: int = 0
     lifetime_cleaning_operations: int = 0
     lifetime_power_on_hours: int = 0
