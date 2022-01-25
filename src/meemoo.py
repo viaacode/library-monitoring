@@ -39,7 +39,7 @@ def recreate_tables(conn):
             lifetime_power_on_hours_when_last_temperature_condition_occurred INTEGER, lifetime_power_on_hours_when_last_power_consumption_condition_occurred INTEGER, \
             media_motion_head_hours_since_last_successful_cleaning_operation INTEGER, media_motion_head_hours_since_2nd_to_last_successful_cleaning INTEGER, \
             media_motion_head_hours_since_3rd_to_last_successful_cleaning INTEGER, lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred INTEGER, \
-            accumulated_transitions_to_idle_a INTEGER, dev_stats JSON")
+            accumulated_transitions_to_idle_a INTEGER, dev_stats JSON)")
     cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,   \
                 volume_serial_number TEXT,  tape_lot_identifier TEXT, volume_barcode TEXT, volume_manufacturer TEXT, volume_license_code TEXT, volume_personality TEXT, page_valid INTEGER, thread_count INTEGER, \
                 volstats JSON, tapealert JSON, tapeusage JSON, tapecap JSON, sequentialaccess JSON)")
@@ -57,13 +57,14 @@ def write_to_db(logs_per_device_dict, conn):
     print("writing to db ...")
     for device in logs_per_device_dict:
         write_to_tape_db(logs_per_device_dict[device], conn)
+        write_to_drive_db(logs_per_device_dict[device], conn)
         # for key in logs_per_device_dict[device]:
         #     print("key:", key, logs_per_device_dict[device][key], '\n\n')
 
 def write_to_tape_db(logs, conn):
     cur = conn.cursor()
     volStats = logs['vol_stats']
-    logging.info(f"Vol_stats: {logs['vol_stats'].to_json()}")
+    logging.debug(f"Vol_stats: {logs['vol_stats'].to_json()}")
     cur.execute(f"INSERT INTO tape (volume_serial_number, tape_lot_identifier, volume_barcode, volume_manufacturer, volume_license_code, \
                 volume_personality, page_valid, thread_count, volstats, tapealert, \
                 tapeusage, tapecap, sequentialaccess) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
@@ -71,12 +72,12 @@ def write_to_tape_db(logs, conn):
     cur.close()
     conn.commit()
 
-def write_to_device_db(logs, conn):
+def write_to_drive_db(logs, conn):
     cur = conn.cursor()
-    devStats: DevStats = logs['power_conditions']
-    powerConditions: PowerConditions = logs['dev_stats']
-    logging.info(f"Dev_stats: {logs['dev_stats'].to_json()}")
-    cur.execute(f"INSERT INTO device (lifetime_media_loads, lifetime_cleaning_operations, lifetime_power_on_hours, lifetime_media_motion_head_hours, \
+    devStats: DevStats = logs['dev_stats']
+    powerConditions: PowerConditions = logs['power_conditions']
+    logging.debug(f"Dev_stats: {devStats.to_json()}")
+    cur.execute(f"INSERT INTO drive (lifetime_media_loads, lifetime_cleaning_operations, lifetime_power_on_hours, lifetime_media_motion_head_hours, \
             lifetime_metres_of_tape_processed, lifetime_media_motion_head_hours_when_incompatible_media_last_loaded, \
             lifetime_power_on_hours_when_last_temperature_condition_occurred, lifetime_power_on_hours_when_last_power_consumption_condition_occurred, \
             media_motion_head_hours_since_last_successful_cleaning_operation, media_motion_head_hours_since_2nd_to_last_successful_cleaning, \
@@ -87,7 +88,7 @@ def write_to_device_db(logs, conn):
              devStats.lifetime_power_on_hours_when_last_temperature_condition_occurred, devStats.lifetime_power_on_hours_when_last_power_consumption_condition_occurred,
              devStats.media_motion_head_hours_since_last_successful_cleaning_operation, devStats.media_motion_head_hours_since_2nd_to_last_successful_cleaning,
              devStats.media_motion_head_hours_since_3rd_to_last_successful_cleaning, devStats.lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred,
-             powerConditions.accumulated_transitions_to_idle_a, devStats))
+             powerConditions.accumulated_transitions_to_idle_a, devStats.to_json()))
     cur.close()
     conn.commit()
 
