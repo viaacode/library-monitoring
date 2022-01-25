@@ -47,14 +47,14 @@ def recreate_tables(conn):
     conn.commit()
 
 def periodicTask(devices, logpages_getter, conn):
-    logging.info("Periodic task...")
+    logging.debug("Periodic task...")
     logs_per_device_dict = {}
     for device in devices:
         logs_per_device_dict[device] = logpages_getter.get_logpages(device)
     write_to_db(logs_per_device_dict, conn)
 
 def write_to_db(logs_per_device_dict, conn):
-    print("writing to db ...")
+    logging.debug("writing to db ...")
     for device in logs_per_device_dict:
         write_to_tape_db(logs_per_device_dict[device], conn)
         write_to_drive_db(logs_per_device_dict[device], conn)
