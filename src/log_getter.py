@@ -30,10 +30,10 @@ class LogGetter:
     def get_real_logpages(self, device):
         output  = None
         try:
-             output = subprocess.run(['sg_logs', '-a', device], check=True, capture_output=True, text=True).stdout
+             output = subprocess.run(['sg_logs', '-a', device], check=True, stdout=subprocess.PIPE, text=True).stdout
         except subprocess.CalledProcessError as err:
              logging.error(f"An error occurred calling sg_logs: {err}")
-        return output
+        return output.stdout
 
     def assert_nr_lines(self, textarr, linecount):
         counted_lines = len(textarr)
