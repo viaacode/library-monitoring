@@ -8,8 +8,8 @@ from log_getter import LogGetter
 #import postgrsql
 import psycopg2
 
-from src.models.dev_stats import DevStats
-from src.models.power_conditions import PowerConditions
+from models.dev_stats import DevStats
+from models.power_conditions import PowerConditions
 
 def process(interval, devices, username, password, fresh=False, static_logs=False):
     try:
