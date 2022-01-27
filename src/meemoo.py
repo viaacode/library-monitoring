@@ -103,6 +103,7 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     logging.basicConfig(format="%(asctime)s %(name)s: %(levelname)s %(message)s")
+    logging.info("Starting meemoo tape diagnostics logger...")
     parser = argparse.ArgumentParser(description="munipack automation cli")
     parser.add_argument(
         "-i",

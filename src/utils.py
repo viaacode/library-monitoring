@@ -2,16 +2,16 @@ import logging
 import re
 
 def extract_int(thetext, sep='='):
-    logging.debug("extract int"+ thetext)
+    logging.debug(f"extract int: {thetext}")
     return int(thetext.split(sep)[1].strip())
 
 def extract_str(thetext, sep=':'):
-    logging.debug("extract str"+ thetext)
+    logging.debug(f"extract str: {thetext}")
     return thetext.split(sep)[1].strip()
 
 
 def extract_size(thetext):
-    logging.debug("extract size"+ thetext)
+    logging.debug("extract size: {thetext}")
     content = thetext.split(':')[1].strip()
     GB = content[-2:] == "GB"
     result = ""
