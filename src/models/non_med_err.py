@@ -6,7 +6,6 @@ from dataclasses_json import dataclass_json
 @dataclass
 @dataclass_json
 class NonMedErrorCount:
-    """Class for keeping track of an item in inventory."""
     non_medium_error_count: int = 0
 
 def extract_int(thetext):

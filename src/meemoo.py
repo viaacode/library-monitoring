@@ -10,6 +10,9 @@ import psycopg2
 
 from models.dev_stats import DevStats
 from models.power_conditions import PowerConditions
+from models.non_med_err import NonMedErrorCount
+from models.write_error import WriteError
+from models.read_error import ReadError
 
 def process(interval, devices, username, password, fresh=False, static_logs=False):
     try:
@@ -39,10 +42,10 @@ def recreate_tables(conn):
             lifetime_power_on_hours_when_last_temperature_condition_occurred INTEGER, lifetime_power_on_hours_when_last_power_consumption_condition_occurred INTEGER, \
             media_motion_head_hours_since_last_successful_cleaning_operation INTEGER, media_motion_head_hours_since_2nd_to_last_successful_cleaning INTEGER, \
             media_motion_head_hours_since_3rd_to_last_successful_cleaning INTEGER, lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred INTEGER, \
-            accumulated_transitions_to_idle_a INTEGER, dev_stats JSON)")
+            accumulated_transitions_to_idle_a INTEGER, non_medium_error_count INTEGER, dev_stats JSONB, read_error JSONB, write_error JSONB)")
     cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,   \
                 volume_serial_number TEXT,  tape_lot_identifier TEXT, volume_barcode TEXT, volume_manufacturer TEXT, volume_license_code TEXT, volume_personality TEXT, page_valid INTEGER, thread_count INTEGER, \
-                volstats JSON, tapealert JSON, tapeusage JSON, tapecap JSON, sequentialaccess JSON)")
+                volstats JSONB, tapealert JSONB, tapeusage JSONB, tapecap JSONB, sequentialaccess JSONB)")
     cur.close()
     conn.commit()
 
@@ -75,20 +78,23 @@ def write_to_tape_db(logs, conn):
 def write_to_drive_db(logs, conn):
     cur = conn.cursor()
     devStats: DevStats = logs['dev_stats']
+    writeError: WriteError = logs['write_err']
+    readError: ReadError = logs['read_err']
     powerConditions: PowerConditions = logs['power_conditions']
+    nonMedErrorCount: NonMedErrorCount = logs['non_med_err']
     logging.debug(f"Dev_stats: {devStats.to_json()}")
     cur.execute(f"INSERT INTO drive (lifetime_media_loads, lifetime_cleaning_operations, lifetime_power_on_hours, lifetime_media_motion_head_hours, \
             lifetime_metres_of_tape_processed, lifetime_media_motion_head_hours_when_incompatible_media_last_loaded, \
             lifetime_power_on_hours_when_last_temperature_condition_occurred, lifetime_power_on_hours_when_last_power_consumption_condition_occurred, \
             media_motion_head_hours_since_last_successful_cleaning_operation, media_motion_head_hours_since_2nd_to_last_successful_cleaning, \
             media_motion_head_hours_since_3rd_to_last_successful_cleaning, lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred, \
-            accumulated_transitions_to_idle_a, dev_stats) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            accumulated_transitions_to_idle_a, non_medium_error_count, dev_stats, read_error, write_error) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (devStats.lifetime_media_loads, devStats.lifetime_cleaning_operations, devStats.lifetime_power_on_hours, devStats.lifetime_media_motion_head_hours,
              devStats.lifetime_metres_of_tape_processed, devStats.lifetime_media_motion_head_hours_when_incompatible_media_last_loaded,
              devStats.lifetime_power_on_hours_when_last_temperature_condition_occurred, devStats.lifetime_power_on_hours_when_last_power_consumption_condition_occurred,
              devStats.media_motion_head_hours_since_last_successful_cleaning_operation, devStats.media_motion_head_hours_since_2nd_to_last_successful_cleaning,
              devStats.media_motion_head_hours_since_3rd_to_last_successful_cleaning, devStats.lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred,
-             powerConditions.accumulated_transitions_to_idle_a, devStats.to_json()))
+             powerConditions.accumulated_transitions_to_idle_a, nonMedErrorCount.non_medium_error_count, devStats.to_json(), readError.to_json(), writeError.to_json()))
     cur.close()
     conn.commit()
 
