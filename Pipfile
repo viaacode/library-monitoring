@@ -9,6 +9,7 @@ psycopg = "*"
 py-postgresql = "*"
 psycopg2-binary = "*"
 dataclasses = "*"
+pysnmp = "*"
 
 [dev-packages]
 rope = "*"
