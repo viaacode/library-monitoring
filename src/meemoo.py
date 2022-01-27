@@ -16,8 +16,10 @@ from models.read_error import ReadError
 
 def process(interval, devices, username, password, fresh=False, static_logs=False):
     try:
-        outputtext = f'Starting Meemoo monitoring with {interval} second interval, with devices: {devices}. Using fake data: {static_logs}'
-        logging.debug(outputtext)
+        addendum = "\nUsing fake data!" if static_logs else "\n"
+        addendum = addendum + " Due to the --fresh flag, the DB will be destroyed !!!!" if fresh else ""
+        outputtext = f'Starting Meemoo monitoring with {interval} second interval, with devices: {devices}. {addendum}'
+        logging.info(outputtext)
         logpages_getter = LogGetter(fake=static_logs)
         host = "do-qas-dbs-md.do.viaa.be"
         port = 5432
@@ -103,7 +105,6 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     logging.basicConfig(format="%(asctime)s %(name)s: %(levelname)s %(message)s")
-    logging.info("Starting meemoo tape diagnostics logger...")
     parser = argparse.ArgumentParser(description="munipack automation cli")
     parser.add_argument(
         "-i",
