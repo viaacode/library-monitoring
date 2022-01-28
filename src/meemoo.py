@@ -14,18 +14,17 @@ from models.non_med_err import NonMedErrorCount
 from models.write_error import WriteError
 from models.read_error import ReadError
 
-def process(interval, devices, username, password, fresh=False, static_logs=False):
+def process(interval, devices, host, username, password, kill=False, fake_logs=False):
     try:
-        addendum = "\nUsing fake data!" if static_logs else "\n"
-        addendum = addendum + " Due to the --fresh flag, the DB will be destroyed !!!!" if fresh else ""
+        addendum = "\nUsing fake data!" if fake_logs else "\n"
+        addendum = addendum + " Due to the --kill flag, the DB will be destroyed !!!!" if kill else ""
         outputtext = f'Starting Meemoo monitoring with {interval} second interval, with devices: {devices}. {addendum}'
         logging.info(outputtext)
-        logpages_getter = LogGetter(fake=static_logs)
-        host = "do-qas-dbs-md.do.viaa.be"
+        logpages_getter = LogGetter(fake=fake_logs)
         port = 5432
         database = "tapemonitor"
         conn = psycopg2.connect(f'dbname={database} user={username} password={password} host={host}')
-        if fresh:
+        if kill:
             recreate_tables(conn)
         ticker = threading.Event()
         periodicTask(devices, logpages_getter, conn)
@@ -108,7 +107,7 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     logging.basicConfig(format="%(asctime)s %(name)s: %(levelname)s %(message)s")
-    parser = argparse.ArgumentParser(description="munipack automation cli")
+    parser = argparse.ArgumentParser(description="Meemoo tape monitoring tool")
     parser.add_argument(
         "-i",
         "--interval",
@@ -124,6 +123,13 @@ if __name__ == "__main__":
         required=True,
     )
     parser.add_argument(
+        "-o",
+        "--host",
+        help="Postgres server name",
+        required=True,
+    )
+
+    parser.add_argument(
         "-u",
         "--username",
         help="Postgres username",
@@ -136,16 +142,16 @@ if __name__ == "__main__":
         required=True,
     )
     parser.add_argument(
-        "-f",
-        "--fresh",
+        "-k",
+        "--kill",
         help="Recreate DB Table (Warning: all data will be lost!!!)",
 	default=False,
 	action="store_true"
     )
     parser.add_argument(
-        "-s",
-        "--static",
-        help="Use static data instead of real SCSI results",
+        "-f",
+        "--fake",
+        help="Use fake static data instead of real SCSI results",
 	default=False,
 	action="store_true"
     )
@@ -168,4 +174,4 @@ if __name__ == "__main__":
     # assert os.path.exists(args.datadir), "datadir does not exist"
     # assert os.path.exists(args.resultdir), "resultdir does not exist"
     # assert os.path.exists(args.fitsdir), "fitsdir does not exist"
-    process(int(args.interval), args.devices, args.username, args.password, args.fresh, args.static)
+    process(int(args.interval), args.devices, args.host, args.username, args.password, args.kill, args.fake)
