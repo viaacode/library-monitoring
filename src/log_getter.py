@@ -1,7 +1,6 @@
 import os
 import logging
 from example_text import text
-import sglogs_splitter
 import models.write_error as write_error
 import models.read_error as read_error
 import models.non_med_err as non_med_err

@@ -1,7 +1,6 @@
 import argparse
 import logging
 from datetime import datetime
-import sglogs_splitter
 from example_text import text
 import threading, time
 from log_getter import LogGetter
