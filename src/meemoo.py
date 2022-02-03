@@ -45,8 +45,8 @@ def recreate_tables(conn):
             accumulated_transitions_to_idle_a INTEGER, non_medium_error_count INTEGER, dev_stats JSONB, read_error JSONB, write_error JSONB)")
     cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, drive_id INTEGER,  \
                 volume_serial_number TEXT,  tape_lot_identifier TEXT, volume_barcode TEXT, volume_manufacturer TEXT, volume_license_code TEXT, volume_personality TEXT, page_valid INTEGER, thread_count INTEGER, \
-                total_read_retries, total_write_retries, lifetime_megabytes_read, last_mount_megabytes_read, lifetime_megabytes_written, last_mount_megabytes_written \
-                total_unrecovered_read_errors, total_unrecovered_write_errors, \
+                total_read_retries INTEGER, total_write_retries INTEGER, lifetime_megabytes_read INTEGER, last_mount_megabytes_read INTEGER, lifetime_megabytes_written INTEGER, last_mount_megabytes_written  INTEGER, \
+                total_unrecovered_read_errors INTEGER, total_unrecovered_write_errors INTEGER, \
                 volstats JSONB, tapealert JSONB, tapeusage JSONB, tapecap JSONB, sequentialaccess JSONB)")
     cur.close()
     conn.commit()
@@ -73,7 +73,7 @@ def write_to_tape_db(logs, drive_id, conn):
     logging.debug(f"Vol_stats: {logs['vol_stats'].to_json()}")
     cur.execute(f"INSERT INTO tape (drive_id, volume_serial_number, tape_lot_identifier, volume_barcode, volume_manufacturer, volume_license_code, \
                 volume_personality, page_valid, thread_count, \
-                total_read_retries, total_write_retries, lifetime_megabytes_read, last_mount_megabytes_read, lifetime_megabytes_written, last_mount_megabytes_written \
+                total_read_retries, total_write_retries, lifetime_megabytes_read, last_mount_megabytes_read, lifetime_megabytes_written, last_mount_megabytes_written, \
                 total_unrecovered_read_errors, total_unrecovered_write_errors, \
                 volstats, tapealert, tapeusage, tapecap, sequentialaccess) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (drive_id, volStats.volume_serial_number, volStats.tape_lot_identifier, volStats.volume_barcode, volStats.volume_manufacturer,
