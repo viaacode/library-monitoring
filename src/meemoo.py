@@ -6,6 +6,8 @@ import threading, time
 from log_getter import LogGetter
 #import postgrsql
 import psycopg2
+from state import State
+import utils
 
 from models.dev_stats import DevStats
 from models.power_conditions import PowerConditions
@@ -13,11 +15,14 @@ from models.non_med_err import NonMedErrorCount
 from models.write_error import WriteError
 from models.read_error import ReadError
 
-def process(interval, devices, host, username, password, kill=False, fake_logs=False):
+state = State()
+
+def process(interval, raw_devices, host, username, password, kill=False, fake_logs=False):
+    conn = None
     try:
         addendum = "\nUsing fake data!" if fake_logs else "\n"
         addendum = addendum + " Due to the --kill flag, the DB will be destroyed !!!!" if kill else ""
-        outputtext = f'Starting Meemoo monitoring with {interval} second interval, with devices: {devices}. {addendum}'
+        outputtext = f'Starting Meemoo monitoring with {interval} second interval, with devices: {raw_devices}. {addendum}'
         logging.info(outputtext)
         logpages_getter = LogGetter(fake=fake_logs)
         port = 5432
@@ -25,26 +30,29 @@ def process(interval, devices, host, username, password, kill=False, fake_logs=F
         conn = psycopg2.connect(f'dbname={database} user={username} password={password} host={host}')
         if kill:
             recreate_tables(conn)
+
         ticker = threading.Event()
+        # convert raw device names (e.g. /dev/sg7) to their unique identifier
+        devices = list(map(utils.get_drive_id, raw_devices))
+        logging.debug(f"Converted {raw_devices} to {devices}")
+        # set the current session id to the highest available number (or 0)
+        state.session_dict = get_session_dict(conn, devices)
+        logging.debug(f"Setting session id to: {state.session_dict}")
         periodicTask(devices, logpages_getter, conn)
         while not ticker.wait(interval):
             periodicTask(devices, logpages_getter, conn)
     finally:
-        conn.close()
+        if(conn):
+            conn.close()
 
 def recreate_tables(conn):
     cur = conn.cursor()
     cur.execute("DROP TABLE IF EXISTS drive")
     cur.execute("DROP TABLE IF EXISTS tape")
     cur.execute("CREATE TABLE drive (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,   \
-            device VARCHAR, lifetime_media_loads INTEGER, lifetime_cleaning_operations INTEGER, lifetime_power_on_hours INTEGER, lifetime_media_motion_head_hours INTEGER, \
-            lifetime_metres_of_tape_processed INTEGER, lifetime_media_motion_head_hours_when_incompatible_media_last_loaded INTEGER, \
-            lifetime_power_on_hours_when_last_temperature_condition_occurred INTEGER, lifetime_power_on_hours_when_last_power_consumption_condition_occurred INTEGER, \
-            media_motion_head_hours_since_last_successful_cleaning_operation INTEGER, media_motion_head_hours_since_2nd_to_last_successful_cleaning INTEGER, \
-            media_motion_head_hours_since_3rd_to_last_successful_cleaning INTEGER, lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred INTEGER, \
-            accumulated_transitions_to_idle_a INTEGER, non_medium_error_count INTEGER, dev_stats JSONB, read_error JSONB, write_error JSONB)")
-    cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, drive_id INTEGER,  \
-                volume_serial_number TEXT,  tape_lot_identifier TEXT, volume_barcode TEXT, volume_manufacturer TEXT, volume_license_code TEXT, volume_personality TEXT, page_valid INTEGER, thread_count INTEGER, \
+            drive_id VARCHAR, session_id VARCHAR, non_medium_error_count INTEGER, total_errors_corrected_read INTEGER, total_bytes_processed_read INTEGER, total_uncorrected_errors_read INTEGER, total_errors_corrected_write INTEGER, total_bytes_processed_write INTEGER, total_uncorrected_errors_write INTEGER, dev_stats JSONB, read_error JSONB, write_error JSONB)")
+    cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, drive_id VARCHAR, session_id INTEGER, \
+                volume_serial_number TEXT, volume_barcode TEXT, volume_personality TEXT, page_valid INTEGER, thread_count INTEGER, \
                 total_read_retries INTEGER, total_write_retries INTEGER, lifetime_megabytes_read INTEGER, last_mount_megabytes_read INTEGER, lifetime_megabytes_written INTEGER, last_mount_megabytes_written  INTEGER, \
                 total_unrecovered_read_errors INTEGER, total_unrecovered_write_errors INTEGER, \
                 volstats JSONB, tapealert JSONB, tapeusage JSONB, tapecap JSONB, sequentialaccess JSONB)")
@@ -61,53 +69,70 @@ def periodicTask(devices, logpages_getter, conn):
 def write_to_db(logs_per_device_dict, conn):
     logging.debug("writing to db ...")
     for device in logs_per_device_dict:
-        drive_id = write_to_drive_db(logs_per_device_dict[device], device, conn)
-        write_to_tape_db(logs_per_device_dict[device], drive_id, conn)
+        device_logs = logs_per_device_dict[device]
+        session_id = state.get_session_id(device, device_logs['vol_stats'].volume_serial_number)
+        write_to_drive_db(device_logs, device, session_id, conn)
+        write_to_tape_db(device_logs, device, session_id, conn)
 
         # for key in logs_per_device_dict[device]:
         #     print("key:", key, logs_per_device_dict[device][key], '\n\n')
 
-def write_to_tape_db(logs, drive_id, conn):
-    cur = conn.cursor()
+def write_to_tape_db(logs, drive_id, session_id, conn):
     volStats = logs['vol_stats']
-    logging.debug(f"Vol_stats: {logs['vol_stats'].to_json()}")
-    cur.execute(f"INSERT INTO tape (drive_id, volume_serial_number, tape_lot_identifier, volume_barcode, volume_manufacturer, volume_license_code, \
-                volume_personality, page_valid, thread_count, \
-                total_read_retries, total_write_retries, lifetime_megabytes_read, last_mount_megabytes_read, lifetime_megabytes_written, last_mount_megabytes_written, \
-                total_unrecovered_read_errors, total_unrecovered_write_errors, \
-                volstats, tapealert, tapeusage, tapecap, sequentialaccess) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                (drive_id, volStats.volume_serial_number, volStats.tape_lot_identifier, volStats.volume_barcode, volStats.volume_manufacturer,
-                 volStats.volume_license_code, volStats.volume_personality, volStats.page_valid, volStats.thread_count,
-                 volStats.total_read_retries, volStats.total_write_retries, volStats.lifetime_megabytes_read, volStats.last_mount_megabytes_read,
-                 volStats.lifetime_megabytes_written, volStats.last_mount_megabytes_written, volStats.total_unrecovered_read_errors, volStats.total_unrecovered_write_errors,
-                 logs['vol_stats'].to_json(), logs['tape_alert'].to_json(),logs['tape_usage'].to_json(),logs['tape_cap'].to_json(), logs['seq_access'].to_json()))
-    cur.close()
-    conn.commit()
+    volStats_json = logs['vol_stats'].to_json()
+    tape_alert_json = logs['tape_alert'].to_json()
+    tape_usage_json = logs['tape_usage'].to_json()
+    tape_cap_json = logs['tape_cap'].to_json()
+    seq_access_json = logs['seq_access'].to_json()
+    prev_hash, curr_hash, hash_updated = state.update_tape_hash(drive_id, utils.hash_strings(volStats_json, tape_alert_json, tape_usage_json, tape_cap_json, seq_access_json))
+    if hash_updated:
+        logging.debug(f"TAPE Row written: {prev_hash} != {curr_hash}")
+        cur = conn.cursor()
+        cur.execute(f"INSERT INTO tape (drive_id, session_id, volume_serial_number, volume_barcode, volume_personality, page_valid, thread_count, \
+                    total_read_retries, total_write_retries, lifetime_megabytes_read, last_mount_megabytes_read, lifetime_megabytes_written, last_mount_megabytes_written, \
+                    total_unrecovered_read_errors, total_unrecovered_write_errors, \
+                    volstats, tapealert, tapeusage, tapecap, sequentialaccess) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (drive_id, session_id, volStats.volume_serial_number, volStats.volume_barcode, volStats.volume_personality, volStats.page_valid, volStats.thread_count,
+                    volStats.total_read_retries, volStats.total_write_retries, volStats.lifetime_megabytes_read, volStats.last_mount_megabytes_read,
+                    volStats.lifetime_megabytes_written, volStats.last_mount_megabytes_written, volStats.total_unrecovered_read_errors, volStats.total_unrecovered_write_errors,
+                    volStats_json, tape_alert_json,tape_usage_json, tape_cap_json, seq_access_json))
+        cur.close()
+        conn.commit()
+    else:
+        logging.debug(f"TAPE Row not written due to {prev_hash} equal to {curr_hash}")
 
-def write_to_drive_db(logs, device, conn):
-    cur = conn.cursor()
+def write_to_drive_db(logs, drive_id, session_id, conn):
     devStats: DevStats = logs['dev_stats']
     writeError: WriteError = logs['write_err']
     readError: ReadError = logs['read_err']
     powerConditions: PowerConditions = logs['power_conditions']
     nonMedErrorCount: NonMedErrorCount = logs['non_med_err']
-    logging.debug(f"Dev_stats: {devStats.to_json()}")
-    cur.execute(f"INSERT INTO drive (device, lifetime_media_loads, lifetime_cleaning_operations, lifetime_power_on_hours, lifetime_media_motion_head_hours, \
-            lifetime_metres_of_tape_processed, lifetime_media_motion_head_hours_when_incompatible_media_last_loaded, \
-            lifetime_power_on_hours_when_last_temperature_condition_occurred, lifetime_power_on_hours_when_last_power_consumption_condition_occurred, \
-            media_motion_head_hours_since_last_successful_cleaning_operation, media_motion_head_hours_since_2nd_to_last_successful_cleaning, \
-            media_motion_head_hours_since_3rd_to_last_successful_cleaning, lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred, \
-            accumulated_transitions_to_idle_a, non_medium_error_count, dev_stats, read_error, write_error) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING ID",
-            (device, devStats.lifetime_media_loads, devStats.lifetime_cleaning_operations, devStats.lifetime_power_on_hours, devStats.lifetime_media_motion_head_hours,
-             devStats.lifetime_metres_of_tape_processed, devStats.lifetime_media_motion_head_hours_when_incompatible_media_last_loaded,
-             devStats.lifetime_power_on_hours_when_last_temperature_condition_occurred, devStats.lifetime_power_on_hours_when_last_power_consumption_condition_occurred,
-             devStats.media_motion_head_hours_since_last_successful_cleaning_operation, devStats.media_motion_head_hours_since_2nd_to_last_successful_cleaning,
-             devStats.media_motion_head_hours_since_3rd_to_last_successful_cleaning, devStats.lifetime_power_on_hours_when_last_operator_initiated_forced_reset_and_or_emergency_eject_occurred,
-             powerConditions.accumulated_transitions_to_idle_a, nonMedErrorCount.non_medium_error_count, devStats.to_json(), readError.to_json(), writeError.to_json()))
-    id_of_new_row = cur.fetchone()[0]
-    cur.close()
-    conn.commit()
-    return id_of_new_row
+    prev_hash, curr_hash, hash_updated = state.update_tape_hash(drive_id, utils.hash_strings(devStats.to_json(), writeError.to_json(), readError.to_json()))
+    if hash_updated:
+        cur = conn.cursor()
+        cur.execute(f"INSERT INTO drive (drive_id, session_id, non_medium_error_count, total_errors_corrected_read, total_bytes_processed_read,\
+                    total_uncorrected_errors_read, total_errors_corrected_write, total_bytes_processed_write, total_uncorrected_errors_write, \
+                    dev_stats, read_error, write_error) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (drive_id, session_id, nonMedErrorCount.non_medium_error_count, readError.total_errors_corrected, readError.total_bytes_processed,
+                readError.total_uncorrected_errors, writeError.total_errors_corrected, writeError.total_bytes_processed, writeError.total_uncorrected_errors
+                ,devStats.to_json(), readError.to_json(), writeError.to_json()))
+        cur.close()
+        conn.commit()
+    else:
+        logging.debug(f"DRIVE Row not written due to {prev_hash} equal to {curr_hash}")
+
+def get_session_dict(conn, devices):
+    cur = conn.cursor()
+    result = {}
+    for drive in devices:
+        cur.execute(f"select max(session_id) from drive where drive_id = %s", (drive,))
+        output = cur.fetchone()[0]
+        if output:
+            result[drive] = int(output)
+        else:
+            result[drive] = 0
+    return result
+
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import logging
 import re
+from hashlib import sha256
 
 def extract_int(thetext, sep='='):
     logging.debug(f"extract int: {thetext}")
@@ -29,3 +30,13 @@ def get_sglogs_value_of(lines, tosearch):
             logging.debug(f"Match with {tosearch}: {match} at idx {idx}")
             return idx
     return None
+
+# concat all arguments and return the sha256 hash
+def hash_strings(*args):
+    concats = "#".join(args)
+    hash = sha256(concats.encode('utf-8')).hexdigest()
+    return hash
+
+# go from /dev/sg7 to "0440F9201"
+def get_drive_id(drive: str):
+    return drive
