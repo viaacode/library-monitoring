@@ -1,6 +1,8 @@
 [Unit]
 Description=Meemoo Library Monitor service
 After=network.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
 
 [Service]
 Restart=on-failure
