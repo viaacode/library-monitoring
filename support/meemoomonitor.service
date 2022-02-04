@@ -1,0 +1,11 @@
+[Unit]
+Description=Meemoo Library Monitor service
+After=network.target
+
+[Service]
+User=miker
+WorkingDirectory=/home/miker
+ExecStart=/home/miker/library-monitoring/start.sh
+
+[Install]
+WantedBy=multi-user.target
