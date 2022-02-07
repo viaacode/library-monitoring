@@ -1,6 +1,8 @@
 import logging
 import re
 from hashlib import sha256
+import subprocess
+from pathlib import Path
 
 def extract_int(thetext, sep='='):
     logging.debug(f"extract int: {thetext}")
@@ -39,4 +41,5 @@ def hash_strings(*args):
 
 # go from /dev/sg7 to "0440F9201"
 def get_drive_id(drive: str):
-    return drive
+    stem = Path(drive).stem.split('-')[1][-10:]  # go from /dev/tape/by-id/scsi-0004151515 to scsi-0004151515 to 0004151515
+    return stem
