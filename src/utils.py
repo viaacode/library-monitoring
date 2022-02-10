@@ -50,7 +50,7 @@ def get_drive_id(drive: str):
     dev = Path(drive).stem
     try:
             output = subprocess.run(['cat', f'/sys/class/scsi_tape/{dev}/device/wwid'], check=True, stdout=subprocess.PIPE, text=True).stdout
-            output = output.split('.')[1]
+            output = output.strip().split('.')[1]
     except subprocess.CalledProcessError as err:
             logging.error(f"An error occurred getting the id: {err}")
     return output
