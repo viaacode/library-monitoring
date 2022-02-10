@@ -131,7 +131,6 @@ if __name__ == "__main__":
     group.add_argument(
         "--devicefile",
         help="A txt file with each line having one device to monitor from /dev/tape/by-id/*",
-        nargs="1",
     )
 
 
