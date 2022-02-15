@@ -16,10 +16,10 @@ def recreate_tables(conn):
     cur.execute("DROP TABLE IF EXISTS drive")
     cur.execute("DROP TABLE IF EXISTS tape")
     cur.execute("CREATE TABLE drive (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,   \
-            drive_id VARCHAR, session_id VARCHAR, non_medium_error_count INTEGER, total_errors_corrected_read INTEGER, total_bytes_processed_read INTEGER, total_uncorrected_errors_read INTEGER, total_errors_corrected_write INTEGER, total_bytes_processed_write INTEGER, total_uncorrected_errors_write INTEGER, dev_stats JSONB, read_error JSONB, write_error JSONB)")
+            drive_id VARCHAR, session_id VARCHAR, non_medium_error_count INTEGER, total_errors_corrected_read INTEGER, total_bytes_processed_read BIGINT, total_uncorrected_errors_read INTEGER, total_errors_corrected_write INTEGER, total_bytes_processed_write BIGINT, total_uncorrected_errors_write INTEGER, dev_stats JSONB, read_error JSONB, write_error JSONB)")
     cur.execute("CREATE TABLE tape (id serial PRIMARY KEY, log_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, drive_id VARCHAR, session_id INTEGER, \
                 volume_serial_number TEXT, volume_barcode TEXT, volume_personality TEXT, page_valid INTEGER, thread_count INTEGER, \
-                total_read_retries INTEGER, total_write_retries INTEGER, lifetime_megabytes_read INTEGER, last_mount_megabytes_read INTEGER, lifetime_megabytes_written INTEGER, last_mount_megabytes_written  INTEGER, \
+                total_read_retries INTEGER, total_write_retries INTEGER, lifetime_megabytes_read BIGINT, last_mount_megabytes_read INTEGER, lifetime_megabytes_written BIGINT, last_mount_megabytes_written  INTEGER, \
                 total_unrecovered_read_errors INTEGER, total_unrecovered_write_errors INTEGER, \
                 volstats JSONB, tapealert JSONB, tapeusage JSONB, tapecap JSONB, sequentialaccess JSONB)")
     cur.close()
