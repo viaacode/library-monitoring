@@ -4,6 +4,7 @@ from datetime import datetime
 from example_text import text
 import threading, time
 from log_getter import LogGetter
+from pathlib import Path
 #import postgrsql
 
 from state import State

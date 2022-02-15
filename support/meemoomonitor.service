@@ -7,9 +7,9 @@ StartLimitBurst=5
 [Service]
 Restart=on-failure
 RestartSec=5s
-User=miker
-WorkingDirectory=/home/miker/library-monitoring/
-ExecStart=/home/miker/library-monitoring/start.sh
+User=librarymonitor
+WorkingDirectory=/home/librarymonitor/library-monitoring/
+ExecStart=/home/librarymonitor/library-monitoring/start.sh
 
 [Install]
 WantedBy=multi-user.target

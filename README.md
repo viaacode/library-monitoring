@@ -32,8 +32,31 @@ optional arguments:
 ```
 
 ## Running
+### Manual
 
 Starting monitoring with fresh and empty database tables:
 ```bash
 ./monitor.sh -i 300 -d /dev/sg7 -o database.meemoo.be -u tapemonitor -p secret_password --kill
 ```
+
+### Using systemd
+
+Copy the systemd unit file:
+
+```sudo cp ./support/meemoomonitor.service /etc/systemd/system```
+
+Let systemd know there's a new unit file
+
+```sudo systemctl daemon-reload```
+
+Tell systemd to enable our file, so that it will start every time we boot:
+
+```sudo systemctl enable meemoomonitor.service```
+
+Start it now:
+
+```sudo systemctl start meemoomonitor.service```
+
+See it's status:
+
+```sudo systemctl status meemoomonitor.service```
