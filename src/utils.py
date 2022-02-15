@@ -3,6 +3,9 @@ import re
 from hashlib import sha256
 import subprocess
 from pathlib import Path
+from collections import namedtuple
+
+Device = namedtuple('Device', ['original', 'resolved', 'id'])
 
 def extract_int(thetext, sep='='):
     logging.debug(f"extract int: {thetext}")
@@ -47,11 +50,11 @@ def hash_strings(*args):
 
 def get_drive_id(drive: str):
     output  = None
-    dev_path = Path(drive).resolve() # resolve all symbolic links so we get the real device
-    dev = dev_path.stem # resolve all symbolic links so we get the real device
+    dev_resolved = Path(drive).resolve() # resolve all symbolic links so we get the real device
+    dev = dev_resolved.stem # resolve all symbolic links so we get the real device
     try:
             output = subprocess.run(['cat', f'/sys/class/scsi_tape/{dev}/device/wwid'], check=True, stdout=subprocess.PIPE, text=True).stdout
-            output = (str(dev_path), output.strip().split('.')[1])
+            output = Device(drive, (str(dev_resolved), output.strip().split('.')[1]))
     except subprocess.CalledProcessError as err:
             logging.error(f"An error occurred getting the id: {err}")
     return output
