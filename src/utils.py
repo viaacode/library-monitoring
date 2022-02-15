@@ -47,7 +47,7 @@ def hash_strings(*args):
 
 def get_drive_id(drive: str):
     output  = None
-    dev = str(Path(drive).resolve()) # resolve all symbolic links so we get the real device
+    dev = Path(drive).resolve().stem # resolve all symbolic links so we get the real device
     try:
             output = subprocess.run(['cat', f'/sys/class/scsi_tape/{dev}/device/wwid'], check=True, stdout=subprocess.PIPE, text=True).stdout
             output = output.strip().split('.')[1]
