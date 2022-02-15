@@ -1,11 +1,14 @@
 import argparse
 import logging
 from datetime import datetime
+from typing import List
 from example_text import text
 import threading, time
 from log_getter import LogGetter
 from pathlib import Path
-from collections import namedtuple
+from utils import Device
+
+
 
 
 #import postgrsql
@@ -16,7 +19,7 @@ import database
 
 
 state = State()
-Student = namedtuple('Device', ['name', 'id'])
+
 
 def process(interval, raw_devices, host, database_name, username, password, erase_db=False, fake_logs=False):
     conn = None
@@ -30,7 +33,7 @@ def process(interval, raw_devices, host, database_name, username, password, eras
 
         ticker = threading.Event()
         # convert raw device names (e.g. /dev/sg7) to their unique identifier
-        devices = list(map(utils.get_drive_id, raw_devices))
+        devices: List[Device] = list(map(utils.get_drive_id, raw_devices))
         logging.info(f"Converted {raw_devices} to {devices}")
         # set the current session id to the highest available number (or 0)
         state.session_dict = get_session_dict(conn, devices)
@@ -51,8 +54,8 @@ def establish_connection(db_name, username, password, host, erase_db):
 def periodicTask(devices, logpages_getter, conn):
     logging.debug("Periodic task...")
     logs_per_device_dict = {}
-    for name, id in devices:
-        logs_per_device_dict[id] = logpages_getter.get_logpages(name)
+    for original, resolved, id in devices:
+        logs_per_device_dict[id] = logpages_getter.get_logpages(original)
     write_to_db(logs_per_device_dict, conn)
 
 
@@ -69,7 +72,7 @@ def write_to_db(logs_per_device_dict, conn):
 def get_session_dict(conn, devices):
     cur = conn.cursor()
     result = {}
-    for name, id in devices:
+    for _, _, id in devices:
         cur.execute(f"select max(session_id) from drive where drive_id = %s", (id,))
         output = cur.fetchone()[0]
         if output:
