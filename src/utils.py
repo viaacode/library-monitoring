@@ -53,7 +53,7 @@ def get_drive_id(drive: str):
     dev_resolved = Path(drive).resolve() # resolve all symbolic links so we get the real device
     dev = dev_resolved.stem # resolve all symbolic links so we get the real device
     try:
-            output = subprocess.run(['cat', f'/sys/class/scsi_tape/{dev}/device/wwid'], check=True, stdout=subprocess.PIPE, text=True).stdout
+            output = subprocess.run(['cat', f'/sys/class/scsi_generic/{dev}/device/wwid'], check=True, stdout=subprocess.PIPE, text=True).stdout
             output = Device(drive, str(dev_resolved), output.strip().split('.')[1])
     except subprocess.CalledProcessError as err:
             logging.error(f"An error occurred getting the id: {err}")
