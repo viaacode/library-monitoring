@@ -20,11 +20,14 @@ class LogGetter:
         self.fake = fake
 
     def get_logpages(self, device):
+        output = None
         if self.fake:
-            return self.sg_output_as_dict(text)
+            output = self.sg_output_as_dict(text)
         else:
-            # TODO perform a real sg_logs call
-            return self.sg_output_as_dict(self.get_real_logpages(device))
+            real_logpages = self.get_real_logpages(device)
+            if real_logpages:
+                output = self.sg_output_as_dict(real_logpages)
+        return output
 
     def get_real_logpages(self, device):
         output  = None
@@ -39,6 +42,8 @@ class LogGetter:
         assert counted_lines == linecount, f"Linecount should be {linecount} but is {counted_lines} for text {textarr}"
 
     def sg_output_as_dict(self, text: str):
+        if text is None:
+            return text
         write_err_arr, read_err_arr, non_med_err_arr, seq_access_arr, dev_stats_arr, vol_stats_arr, power_conditions_arr, tape_alert_arr, tape_usage_arr, tape_cap_arr = self.split_sg_output(text)
         return {"write_err": write_error.from_arr(write_err_arr),
                 "read_err": read_error.from_arr(read_err_arr),

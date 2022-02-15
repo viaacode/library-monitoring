@@ -60,9 +60,10 @@ def write_to_db(logs_per_device_dict, conn):
     logging.debug("writing to db ...")
     for device in logs_per_device_dict:
         device_logs = logs_per_device_dict[device]
-        session_id = state.get_session_id(device, device_logs['vol_stats'].volume_serial_number)
-        database.write_to_drive_db(device_logs, state, device, session_id, conn)
-        database.write_to_tape_db(device_logs, state, device, session_id, conn)
+        if device_logs is not None:
+            session_id = state.get_session_id(device, device_logs['vol_stats'].volume_serial_number)
+            database.write_to_drive_db(device_logs, state, device, session_id, conn)
+            database.write_to_tape_db(device_logs, state, device, session_id, conn)
 
 
 def get_session_dict(conn, devices):
