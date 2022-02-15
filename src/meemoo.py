@@ -14,19 +14,15 @@ import database
 
 state = State()
 
-def process(interval, raw_devices, host, username, password, kill=False, fake_logs=False):
+def process(interval, raw_devices, host, database_name, username, password, erase_db=False, fake_logs=False):
     conn = None
     try:
         addendum = "\nUsing fake data!" if fake_logs else "\n"
-        addendum = addendum + " Due to the --kill flag, the DB will be destroyed !!!!" if kill else ""
+        addendum = addendum + " Due to the --erasedb flag, the DB will be destroyed !!!!" if erase_db else ""
         outputtext = f'Starting Meemoo monitoring with {interval} second interval, with devices: {raw_devices}. {addendum}'
         logging.info(outputtext)
         logpages_getter = LogGetter(fake=fake_logs)
-        port = 5432
-        database_name = "tapemonitor"
-        conn = database.connect(database_name, username, password, host)
-        if kill:
-            database.recreate_tables(conn)
+        conn = establish_connection(database_name, username, password, host, erase_db)
 
         ticker = threading.Event()
         # convert raw device names (e.g. /dev/sg7) to their unique identifier
@@ -42,6 +38,11 @@ def process(interval, raw_devices, host, username, password, kill=False, fake_lo
         if(conn):
             conn.close()
 
+def establish_connection(db_name, username, password, host, erase_db):
+        conn = database.connect(db_name, username, password, host)
+        if erase_db:
+            database.recreate_tables(conn)
+        return conn
 
 def periodicTask(devices, logpages_getter, conn):
     logging.debug("Periodic task...")
@@ -91,7 +92,12 @@ if __name__ == "__main__":
         help="Postgres server name",
         required=True,
     )
-
+    parser.add_argument(
+        "-d",
+        "--databasename",
+        help="Postgres database name",
+        required=True,
+    )
     parser.add_argument(
         "-u",
         "--username",
@@ -105,13 +111,6 @@ if __name__ == "__main__":
         required=True,
     )
     parser.add_argument(
-        "-k",
-        "--kill",
-        help="Recreate DB Table (Warning: all data will be lost!!!)",
-	default=False,
-	action="store_true"
-    )
-    parser.add_argument(
         "-f",
         "--fake",
         help="Use fake static data instead of real SCSI results",
@@ -122,9 +121,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "-x", "--verbose", help="Set logging to debug mode", action="store_true"
     )
+    parser.add_argument(
+        "--erasedb",
+        help="Recreate DB Table (Warning: all data will be lost!!!)",
+	default=False,
+	action="store_true"
+    )
+    parser.add_argument(
+        "--erasedbonly",
+        help="Recreate DB Table (Warning: all data will be lost!!!) and exit",
+	default=False,
+	action="store_true"
+    )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        "-d",
         "--devices",
         help="List of devices to monitor",
         nargs="+",
@@ -146,13 +156,15 @@ if __name__ == "__main__":
     if args.verbose:
         logger.setLevel(logging.DEBUG)
         fh.setLevel(logging.DEBUG)
+    # delete DB and exit
+    if args.erasedbonly:
+        establish_connection(args.databasename, args.username, args.password, args.host, True)
+        logging.info(f"DB {args.databasename} was erased at {args.host}")
+        exit()
 
     if args.devicefile:
         with open(args.devicefile, "r") as f: devices = list(map(str.strip, f.read().splitlines()))
     else:
         devices = args.devices
     logging.debug(f"Read the device list as being: {devices}")
-    # assert os.path.exists(args.datadir), "datadir does not exist"
-    # assert os.path.exists(args.resultdir), "resultdir does not exist"
-    # assert os.path.exists(args.fitsdir), "fitsdir does not exist"
-    process(int(args.interval), devices, args.host, args.username, args.password, args.kill, args.fake)
+    process(int(args.interval), devices, args.host, args.databasename, args.username, args.password, args.erasedb, args.fake)
