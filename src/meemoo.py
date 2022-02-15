@@ -5,6 +5,9 @@ from example_text import text
 import threading, time
 from log_getter import LogGetter
 from pathlib import Path
+from collections import namedtuple
+
+
 #import postgrsql
 
 from state import State
@@ -13,6 +16,7 @@ import database
 
 
 state = State()
+Student = namedtuple('Device', ['name', 'id'])
 
 def process(interval, raw_devices, host, database_name, username, password, erase_db=False, fake_logs=False):
     conn = None
@@ -47,8 +51,8 @@ def establish_connection(db_name, username, password, host, erase_db):
 def periodicTask(devices, logpages_getter, conn):
     logging.debug("Periodic task...")
     logs_per_device_dict = {}
-    for device in devices:
-        logs_per_device_dict[device] = logpages_getter.get_logpages(device)
+    for name, id in devices:
+        logs_per_device_dict[id] = logpages_getter.get_logpages(name)
     write_to_db(logs_per_device_dict, conn)
 
 
@@ -64,13 +68,13 @@ def write_to_db(logs_per_device_dict, conn):
 def get_session_dict(conn, devices):
     cur = conn.cursor()
     result = {}
-    for drive in devices:
-        cur.execute(f"select max(session_id) from drive where drive_id = %s", (drive,))
+    for name, id in devices:
+        cur.execute(f"select max(session_id) from drive where drive_id = %s", (id,))
         output = cur.fetchone()[0]
         if output:
-            result[drive] = int(output)
+            result[id] = int(output)
         else:
-            result[drive] = 0
+            result[id] = 0
     return result
 
 
