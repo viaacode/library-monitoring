@@ -41,6 +41,8 @@ def process(interval, raw_devices, host, database_name, username, password, eras
         periodicTask(devices, logpages_getter, conn)
         while not ticker.wait(interval):
             periodicTask(devices, logpages_getter, conn)
+    except Exception as e:
+        logging.error(f"Encountered error in main process loop: {e}")
     finally:
         if(conn):
             conn.close()
