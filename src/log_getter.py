@@ -80,7 +80,7 @@ class LogGetter:
         logging.debug(f"dev stats: {dev_stats}")
 
         vol_stats = self.get_lines_between_ids('Volume statistics page', '\[0x1a\]', lines)
-        self.assert_nr_lines(vol_stats, 49)
+        # self.assert_nr_lines(vol_stats, 49)
         logging.debug(f"vol_stats: {vol_stats}")
 
         power_conditions = self.get_lines_between_ids('\[0x1a\]', '\[0x1b\]', lines)

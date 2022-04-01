@@ -40,7 +40,10 @@ def process(interval, raw_devices, host, database_name, username, password, eras
         logging.info(f"Setting session id to: {state.session_dict}")
         periodicTask(devices, logpages_getter, conn)
         while not ticker.wait(interval):
-            periodicTask(devices, logpages_getter, conn)
+            try:
+                periodicTask(devices, logpages_getter, conn)
+            except Exception as e:
+                logging.error(f"Encountered error in periodic task loop: {e}")
     except Exception as e:
         logging.error(f"Encountered error in main process loop: {e}")
     finally:
