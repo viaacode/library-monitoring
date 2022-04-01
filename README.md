@@ -68,8 +68,8 @@ See it's status:
 
 ### Helper scripts
 
-```journal.sh``` ==> show the systemd logs for meemoomoniter.service
-```system.sh``` ==> perform systemd commands for meemoomoniter.service, such as 'start', 'stop', 'status', 'restart'
-```dellogs.sh``` ==> delete local log files (not the systemd ones)
-```monitor.sh``` ==> convenience wrapper to start the python monitoring, usually not called directly
-```start.sh``` ==> main entry for starting the python monitoring, both for local testing and for the systemd unit file
+* ```journal.sh```: show the systemd logs for meemoomoniter.service
+* ```system.sh```: perform systemd commands for meemoomoniter.service, such as 'start', 'stop', 'status', 'restart'
+* ```dellogs.sh```: delete local log files (not the systemd ones)
+* ```monitor.sh```: convenience wrapper to start the python monitoring, usually not called directly
+* ```start.sh```: main entry for starting the python monitoring, both for local testing and for the systemd unit file
