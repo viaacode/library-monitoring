@@ -1,2 +1,2 @@
-!#/bin/sh
+#!/bin/sh
 journalctl -u meemoomonitor.service
